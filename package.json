@@ -1,0 +1,8 @@
+{
+  "name": "makefun-coin-launch-01",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@solana/web3.js": "1.98.0"
+  }
+}
