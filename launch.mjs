@@ -18,30 +18,15 @@ import {
 } from '@solana/web3.js';
 
 const RPC_URL = process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
-const MASCOT_PATH = new URL('./assets/mark-1024.png', import.meta.url);
 const REQUIRED_DESCRIPTION = 'made for make.fun $1000 bounty';
+// pump.fun's own /api/ipfs answers a plain server-side request with a Cloudflare
+// managed challenge, so the metadata JSON (pointing at this repo's own unmodified
+// mascot copy) is hosted from this repo instead; any http(s) URI is valid metadata.
+const METADATA_URI = 'https://raw.githubusercontent.com/lacerta15/makefun-coin-launch-01/master/assets/metadata.json';
 
 function loadKeypair(path) {
   const raw = JSON.parse(readFileSync(path, 'utf8'));
   return Keypair.fromSecretKey(Uint8Array.from(raw));
-}
-
-async function uploadMetadata(walletPubkey) {
-  const imageBytes = readFileSync(MASCOT_PATH);
-  const form = new FormData();
-  form.append('file', new Blob([imageBytes], { type: 'image/png' }), 'mark-1024.png');
-  form.append('name', 'make.fun bounty coin');
-  form.append('symbol', 'MFBOUNTY');
-  form.append('description', REQUIRED_DESCRIPTION);
-  form.append('showName', 'true');
-
-  const res = await fetch('https://pump.fun/api/ipfs', { method: 'POST', body: form });
-  if (!res.ok) {
-    throw new Error(`metadata upload failed: HTTP ${res.status} ${await res.text()}`);
-  }
-  const data = await res.json();
-  if (!data.metadataUri) throw new Error(`no metadataUri in response: ${JSON.stringify(data)}`);
-  return data;
 }
 
 async function buildCreateTx({ walletPubkey, mintPubkey, metadataUri, buySol }) {
@@ -87,15 +72,11 @@ async function main() {
   const balance = await connection.getBalance(wallet.publicKey);
   console.log(`wallet ${wallet.publicKey.toBase58()} balance: ${balance / 1e9} SOL`);
 
-  console.log('uploading metadata to pump.fun ipfs...');
-  const meta = await uploadMetadata(wallet.publicKey.toBase58());
-  console.log('metadataUri:', meta.metadataUri);
-
   console.log('building create transaction...');
   const txBytes = await buildCreateTx({
     walletPubkey: wallet.publicKey.toBase58(),
     mintPubkey: mintKeypair.publicKey.toBase58(),
-    metadataUri: meta.metadataUri,
+    metadataUri: METADATA_URI,
     buySol,
   });
 
